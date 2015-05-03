@@ -29,7 +29,10 @@
 package com.ea.orbit.samples.adventure;
 
 import com.ea.orbit.actors.IActor;
+import com.ea.orbit.concurrent.Task;
 
 public interface ICharacter extends IActor
 {
+    Task<Boolean> registerName(String friendlyName);
+    Task<Boolean> verifyPassword(String password);
 }

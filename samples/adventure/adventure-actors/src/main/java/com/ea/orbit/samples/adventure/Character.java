@@ -29,7 +29,35 @@
 package com.ea.orbit.samples.adventure;
 
 import com.ea.orbit.actors.runtime.OrbitActor;
+import com.ea.orbit.concurrent.Task;
 
-public class Character extends OrbitActor implements ICharacter
+import static com.ea.orbit.async.Await.await;
+
+public class Character extends OrbitActor<Character.State> implements ICharacter
 {
+    public static class State
+    {
+        public boolean nameTaken = false;
+        public String friendlyName;
+    }
+
+    @Override
+    public Task<Boolean> registerName(String friendlyName)
+    {
+        if(!state().nameTaken)
+        {
+            state().nameTaken = true;
+            state().friendlyName = friendlyName;
+            await(writeState());
+            Task.fromValue(true);
+        }
+
+        return Task.fromValue(false);
+    }
+
+    @Override
+    public Task<Boolean> verifyPassword(String password)
+    {
+        return Task.fromValue(false);
+    }
 }

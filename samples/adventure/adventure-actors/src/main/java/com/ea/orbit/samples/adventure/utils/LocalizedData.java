@@ -40,4 +40,16 @@ public class LocalizedData
 
     @Config("adventure.localization.chooseName")
     public String chooseName = "CHOOSE_NAME";
+
+    @Config("adventure.localization.verifyOwnership")
+    public String verifyOwnership = "VERIFY_OWNERSHIP";
+
+    @Config("adventure.localization.nameRegistered")
+    public String nameRegistered = "NAME_REGISTERED";
+
+    @Config("adventure.localization.enterPassword")
+    public String enterPassword = "ENTER_PASSWORD";
+
+    @Config("adventure.localization.invalidPassword")
+    public String invalidPassword = "INVALID_PASSWORD";
 }
