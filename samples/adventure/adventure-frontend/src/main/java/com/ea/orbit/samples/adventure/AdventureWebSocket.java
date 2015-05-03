@@ -28,9 +28,74 @@
 
 package com.ea.orbit.samples.adventure;
 
+import com.ea.orbit.actors.IActor;
+import com.ea.orbit.concurrent.Task;
+
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.websocket.CloseReason;
+import javax.websocket.OnClose;
+import javax.websocket.OnError;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
+
+import java.io.StringReader;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 @ServerEndpoint("/adventure")
 public class AdventureWebSocket
 {
+    private ISession adventureSession;
+    private ISessionObserver sessionObserver;
+
+    @OnOpen
+    public void onWebSocketConnect(Session session)
+    {
+        // Create a random new session
+        adventureSession = IActor.getReference(ISessionManager.class).createNewSession().join();
+
+        // Create the observer
+        sessionObserver = new ISessionObserver()
+        {
+            @Override
+            public Task serverMessage(final String message)
+            {
+                JsonObject jsonObject = Json.createObjectBuilder()
+                        .add("message", message)
+                        .build();
+
+                session.getAsyncRemote().sendObject(jsonObject.toString());
+                return Task.done();
+            }
+        };
+
+        adventureSession.addObserver(sessionObserver).join();
+
+        // Begin session
+        adventureSession.beginSession().join();
+    }
+
+    @OnMessage
+    public void onWebSocketText(String jsonMessage, Session session)
+    {
+        JsonObject jsonObject = Json.createReader(new StringReader(jsonMessage)).readObject();
+        String useInput = jsonObject.getString("userInput");
+        adventureSession.processInput(useInput);
+    }
+
+    @OnClose
+    public void onWebSocketClose(CloseReason reason)
+    {
+        IActor.getReference(ISessionManager.class).destroySession(adventureSession);
+    }
+
+    @OnError
+    public void onWebSocketError(Throwable cause)
+    {
+        IActor.getReference(ISessionManager.class).destroySession(adventureSession);
+    }
 }

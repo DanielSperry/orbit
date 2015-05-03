@@ -28,8 +28,33 @@
 
 package com.ea.orbit.samples.adventure;
 
+import com.ea.orbit.actors.ObserverManager;
 import com.ea.orbit.actors.runtime.OrbitActor;
+import com.ea.orbit.concurrent.Task;
 
-public class CharacterActor extends OrbitActor implements ICharacter
+public class Session extends OrbitActor<Session.State> implements ISession
 {
+    public static class State
+    {
+        public ObserverManager<ISessionObserver> observers = new ObserverManager<>();
+    }
+
+    @Override
+    public Task processInput(String input)
+    {
+        return Task.done();
+    }
+
+    @Override
+    public Task addObserver(ISessionObserver observer)
+    {
+        state().observers.addObserver(observer);
+        return Task.done();
+    }
+
+    @Override
+    public Task beginSession()
+    {
+        return Task.done();
+    }
 }
