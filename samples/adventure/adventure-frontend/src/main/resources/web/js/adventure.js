@@ -27,17 +27,75 @@
  */
 
 jQuery(function($, undefined) {
+    var parser = document.createElement('a');
+    parser.href = window.location.href;
+    var serviceLocation = (parser.protocol=="https" ? "wss" : "ws") +"://"+parser.host+"/adventure";
+    var pendingMessages = [];
+    var wsocket;
+
+    // Startup
     var term = $('#terminal').terminal({}, {greetings: 'Orbit Text Adventure Sample'});
     term.pause();
+    connectToServer();
 
+    // Terminal
     $('#terminalInput').keyup(
         function(e){
             if(e.keyCode == 13)
             {
                 var inText = $(this).val();
-                term.echo(inText);
+                sendMessage(inText);
                 this.select();
             }
         })
         .focus();
+
+    // Websocket code
+    function onMessageReceived(evt) {
+        var recv = JSON.parse(evt.data);
+
+        if(recv.message)
+        {
+            term.echo(recv.message);
+        }
+    }
+
+    function sendMessage(userInput) {
+        var msg = {
+            "userInput": userInput
+        };
+        if(!wsocket) {
+            pendingMessages.push(msg);
+            connectToServer();
+        }
+        else {
+            wsocket.send(JSON.stringify(msg));
+        }
+    }
+
+
+    function connectToServer() {
+        term.echo("Connecting to Orbit Adventure Game Server... ");
+        wsocket = new WebSocket(serviceLocation);
+        wsocket.onmessage = onMessageReceived;
+        wsocket.onclose = onClose;
+        wsocket.onopen = onOpen;
+    }
+
+    function onOpen() {
+        term.echo("Connected.");
+        if(pendingMessages.length > 0) {
+            var messages = pendingMessages;
+            pendingMessages = [];
+            for(var i=0; i<messages.length; i++) {
+                wsocket.send(JSON.stringify(messages[i]));
+            }
+        }
+    }
+
+    function onClose() {
+        term.echo("Disconnected.");
+        wsocket = null;
+    }
+
 });

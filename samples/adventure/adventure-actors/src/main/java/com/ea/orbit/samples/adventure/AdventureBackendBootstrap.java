@@ -28,52 +28,15 @@
 
 package com.ea.orbit.samples.adventure;
 
-import com.ea.orbit.actors.ObserverManager;
-import com.ea.orbit.actors.runtime.OrbitActor;
-import com.ea.orbit.concurrent.Task;
+import com.ea.orbit.container.OrbitContainer;
 
-import static com.ea.orbit.async.Await.await;
+import java.util.concurrent.ExecutionException;
 
-public class Session extends OrbitActor<Session.State> implements ISession
+public class AdventureBackendBootstrap
 {
-    public static class State
+    public static void main(String[] args) throws ExecutionException, InterruptedException
     {
-        public ObserverManager<ISessionObserver> observers = new ObserverManager<>();
-    }
-
-    @Override
-    public Task activateAsync()
-    {
-        // We don't care about the result of this
-        state().observers.cleanup();
-
-        return super.activateAsync();
-    }
-
-    @Override
-    public Task processInput(String input)
-    {
-        state().observers.notifyObservers(o -> o.serverMessage("Echoed: " + input));
-
-        return Task.done();
-    }
-
-    @Override
-    public Task addObserver(ISessionObserver observer)
-    {
-        state().observers.addObserver(observer);
-        return writeState();
-    }
-
-    @Override
-    public Task beginSession()
-    {
-        return Task.done();
-    }
-
-    @Override
-    public Task endSession()
-    {
-        return clearState();
+        final OrbitContainer container = new OrbitContainer();
+        container.start();
     }
 }
