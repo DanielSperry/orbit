@@ -42,7 +42,7 @@ public class Character extends OrbitActor<Character.State> implements ICharacter
     }
 
     @Override
-    public Task<Boolean> registerName(String friendlyName)
+    public Task<Boolean> registerCharacter(String friendlyName, String password)
     {
         if(!state().nameTaken)
         {

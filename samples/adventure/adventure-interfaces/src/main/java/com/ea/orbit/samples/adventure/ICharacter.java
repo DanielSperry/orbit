@@ -33,6 +33,6 @@ import com.ea.orbit.concurrent.Task;
 
 public interface ICharacter extends IActor
 {
-    Task<Boolean> registerName(String friendlyName);
+    Task<Boolean> registerCharacter(String friendlyName, String password);
     Task<Boolean> verifyPassword(String password);
 }

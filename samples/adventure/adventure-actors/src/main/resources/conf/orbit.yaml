@@ -20,7 +20,10 @@ adventure.localization.greetingMessage: |
   fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
   culpa qui officia deserunt mollit anim id est laborum.
 
-adventure.localization.chooseName: "Enter the name you wish to use:"
-adventure.localization.verifyOwnership: "That character already exists, do you own it? [yes/no]"
-adventure.localization.nameRegistered: "Congratulations, your character has been create. Choose a password:"
-adventure.localization.enterPassword: "Enter password:"
+adventure.localization.loginHelp: |
+  Use existing character: login <username> <password>
+  Create new character: register <username> <password>
+
+adventure.localization.invalidCredentials: "Invalid username or password."
+
+adventure.localization.userAlreadyExists: "User already exists. Please choose another name."

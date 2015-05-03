@@ -28,23 +28,55 @@
 
 package com.ea.orbit.samples.adventure.utils;
 
-import com.ea.orbit.annotation.Config;
-
-import javax.inject.Singleton;
-
-@Singleton
-public class LocalizedData
+public class MessageParser
 {
-    @Config("adventure.localization.greetingMessage")
-    public String greetingMessage = "WELCOME_MESSAGE";
+    private String rawInput;
+    private String[] parts;
 
-    @Config("adventure.localization.loginHelp")
-    public String loginHelp = "LOGIN_HELP";
+    public MessageParser(String rawInput)
+    {
+        this.rawInput = rawInput.trim();
+    }
 
-    @Config("adventure.localization.invalidCredentials")
-    public String invalidCredentials = "INVALID_CREDENTIALS";
+    public String getVerb()
+    {
+        return getPart(0).toLowerCase();
+    }
 
-    @Config("adventure.localization.userAlreadyExists")
-    public String userAlreadyExists = "USER_EXISTS_ALREADY";
+    public String getRawWithoutVerb()
+    {
+        String verb = getVerb();
+        if(rawInput.length() > verb.length())
+        {
+            String raw = rawInput.substring(verb.length() + 1);
+            return raw.trim();
+        }
 
+        return null;
+    }
+
+    public String getRaw()
+    {
+        return rawInput;
+    }
+
+    public String getPart(int partNum)
+    {
+        if(parts == null)
+        {
+            parts = rawInput.split("\\s+");
+        }
+
+        if(parts.length > partNum)
+        {
+            return parts[partNum];
+        }
+
+        return null;
+    }
+
+    public int getArgumentCount()
+    {
+        return parts.length - 1;
+    }
 }

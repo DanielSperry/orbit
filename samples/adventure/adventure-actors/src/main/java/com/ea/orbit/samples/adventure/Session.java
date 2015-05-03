@@ -33,6 +33,7 @@ import com.ea.orbit.actors.ObserverManager;
 import com.ea.orbit.actors.runtime.OrbitActor;
 import com.ea.orbit.concurrent.Task;
 import com.ea.orbit.samples.adventure.utils.LocalizedData;
+import com.ea.orbit.samples.adventure.utils.MessageParser;
 
 import javax.inject.Inject;
 
@@ -42,17 +43,14 @@ public class Session extends OrbitActor<Session.State> implements ISession
 {
     public enum SessionState
     {
-        LOCKED,
-        CHOOSE_NAME,
-        VERIFY_OWNER,
-        PROVIDE_PASSWORD,
-        LOGGED_IN
+        UNAUTHED,
+        AUTHED
     }
 
     public static class State
     {
         public ObserverManager<ISessionObserver> observers = new ObserverManager<>();
-        public SessionState sessionState = SessionState.LOCKED;
+        public SessionState sessionState = SessionState.UNAUTHED;
         public ICharacter character = null;
     }
 
@@ -72,66 +70,65 @@ public class Session extends OrbitActor<Session.State> implements ISession
     @Override
     public Task processInput(String input)
     {
+        MessageParser parser = new MessageParser(input);
+
         switch (state().sessionState)
         {
-            case CHOOSE_NAME:
+            case UNAUTHED:
             {
-                await(sendMessage("\033[1;34m" + input));
-                ICharacter character = IActor.getReference(ICharacter.class, input.toLowerCase());
-                state().character = character;
-                boolean registeredName = (character.registerName(input)).join();
-
-                System.out.print(registeredName);
-
-
-                if (!registeredName)
+                if(parser.getVerb().equals("login"))
                 {
-                    await(sendMessage(localized.nameRegistered));
-                    state().sessionState = SessionState.PROVIDE_PASSWORD;
-                }
-                else
-                {
-                    await(sendMessage(localized.verifyOwnership));
-                    state().sessionState = SessionState.VERIFY_OWNER;
-                }
+                    if(parser.getArgumentCount() >= 2)
+                    {
+                        String username = parser.getPart(1);
+                        String password = parser.getPart(2);
 
-                return writeState();
+                        boolean loginOk = await(IActor.getReference(ICharacter.class, username.toLowerCase()).verifyPassword(password));
+
+                        if(loginOk)
+                        {
+                            state().sessionState = SessionState.AUTHED;
+                            await(writeState());
+                            sendMessage("TODO: Enter the game here");
+                        }
+                        else
+                        {
+                            await(sendMessage(localized.invalidCredentials));
+                        }
+                    }
+                    else
+                    {
+                        await(sendMessage(localized.loginHelp));
+                    }
+                }
+                else if(parser.getVerb().equals("register"))
+                {
+                    if (parser.getArgumentCount() >= 2)
+                    {
+                        String username = parser.getPart(1);
+                        String password = parser.getPart(2);
+
+                        boolean registered = await(IActor.getReference(ICharacter.class, username.toLowerCase()).registerCharacter(username, password));
+                        if(registered)
+                        {
+                            state().sessionState = SessionState.AUTHED;
+                            await(writeState());
+                            sendMessage("TODO: Enter the game here");
+                        }
+                        else
+                        {
+
+                        }
+                    }
+                }
             }
+            break;
 
-            case VERIFY_OWNER:
+            case AUTHED:
             {
-                await(sendMessage("\033[1;34m" + input));
-                if (input.equals("yes"))
-                {
-                    state().sessionState = SessionState.PROVIDE_PASSWORD;
-                    await(sendMessage(localized.enterPassword));
-                }
-                else if (input.equals("no"))
-                {
-                    state().sessionState = SessionState.CHOOSE_NAME;
-                    await(sendMessage(localized.chooseName));
-                }
 
-                return writeState();
             }
-
-            case PROVIDE_PASSWORD:
-            {
-                boolean validPassword = await(state().character.verifyPassword(input));
-                if (validPassword)
-                {
-                    state().sessionState = SessionState.LOGGED_IN;
-                    await(sendMessage("login was ok"));
-                }
-                else
-                {
-                    await(sendMessage("\033[1;31m" + localized.invalidPassword));
-                    state().sessionState = SessionState.CHOOSE_NAME;
-                    await(sendMessage(localized.chooseName));
-                }
-
-                return writeState();
-            }
+            break;
         }
 
         return Task.done();
@@ -150,10 +147,8 @@ public class Session extends OrbitActor<Session.State> implements ISession
         // Send greeting
         await(sendMessage(localized.greetingMessage + "\n"));
 
-        // Choose name
-        state().sessionState = SessionState.CHOOSE_NAME;
-        await(writeState());
-        await(sendMessage(localized.chooseName));
+        // Login help
+        await(sendMessage(localized.loginHelp));
 
         return Task.done();
     }
