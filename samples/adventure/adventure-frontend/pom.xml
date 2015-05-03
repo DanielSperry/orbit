@@ -66,7 +66,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.3.2</version>
                 <configuration>
-                    <mainClass>com.ea.orbit.container.Bootstrap</mainClass>
+                    <mainClass>com.ea.orbit.samples.adventure.AdventureFrontendBootstrap</mainClass>
                 </configuration>
             </plugin>
         </plugins>

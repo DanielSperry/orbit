@@ -28,6 +28,7 @@
 
 package com.ea.orbit.samples.adventure;
 
+import com.ea.orbit.async.Await;
 import com.ea.orbit.container.OrbitContainer;
 
 import java.util.concurrent.ExecutionException;
@@ -36,6 +37,7 @@ public class AdventureBackendBootstrap
 {
     public static void main(String[] args) throws ExecutionException, InterruptedException
     {
+        Await.init();
         final OrbitContainer container = new OrbitContainer();
         container.start();
     }

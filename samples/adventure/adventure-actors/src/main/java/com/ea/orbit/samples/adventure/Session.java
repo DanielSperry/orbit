@@ -72,19 +72,19 @@ public class Session extends OrbitActor<Session.State> implements ISession
     @Override
     public Task processInput(String input)
     {
-        switch(state().sessionState)
+        switch (state().sessionState)
         {
             case CHOOSE_NAME:
             {
                 await(sendMessage("\033[1;34m" + input));
                 ICharacter character = IActor.getReference(ICharacter.class, input.toLowerCase());
                 state().character = character;
-                boolean registeredName = await(character.registerName(input));
+                boolean registeredName = (character.registerName(input)).join();
 
                 System.out.print(registeredName);
 
 
-                if(registeredName)
+                if (!registeredName)
                 {
                     await(sendMessage(localized.nameRegistered));
                     state().sessionState = SessionState.PROVIDE_PASSWORD;
@@ -101,12 +101,12 @@ public class Session extends OrbitActor<Session.State> implements ISession
             case VERIFY_OWNER:
             {
                 await(sendMessage("\033[1;34m" + input));
-                if(input.equals("yes"))
+                if (input.equals("yes"))
                 {
                     state().sessionState = SessionState.PROVIDE_PASSWORD;
                     await(sendMessage(localized.enterPassword));
                 }
-                else if(input.equals("no"))
+                else if (input.equals("no"))
                 {
                     state().sessionState = SessionState.CHOOSE_NAME;
                     await(sendMessage(localized.chooseName));
@@ -118,7 +118,7 @@ public class Session extends OrbitActor<Session.State> implements ISession
             case PROVIDE_PASSWORD:
             {
                 boolean validPassword = await(state().character.verifyPassword(input));
-                if(validPassword)
+                if (validPassword)
                 {
                     state().sessionState = SessionState.LOGGED_IN;
                     await(sendMessage("login was ok"));
