@@ -34,7 +34,7 @@ jQuery(function($, undefined) {
     var wsocket;
 
     // Startup
-    var term = $('#terminal').terminal({}, {greetings: 'Orbit Text Adventure Sample'});
+    var term = $('#terminal').terminal({}, {greetings: 'Orbit Text Adventure Sample\n'});
     term.pause();
     connectToServer();
 
@@ -75,15 +75,16 @@ jQuery(function($, undefined) {
 
 
     function connectToServer() {
-        term.echo("Connecting to Orbit Adventure Game Server... ");
+        term.echo("Connecting to Orbit Adventure Game Server...");
         wsocket = new WebSocket(serviceLocation);
         wsocket.onmessage = onMessageReceived;
         wsocket.onclose = onClose;
         wsocket.onopen = onOpen;
+        wsocket.onerror = onError;
     }
 
     function onOpen() {
-        term.echo("Connected.");
+        term.echo("Connected.\n");
         if(pendingMessages.length > 0) {
             var messages = pendingMessages;
             pendingMessages = [];
@@ -94,7 +95,12 @@ jQuery(function($, undefined) {
     }
 
     function onClose() {
-        term.echo("Disconnected.");
+        term.error("Disconnected.");
+        wsocket = null;
+    }
+
+    function onError(evt) {
+        term.error(evt.message);
         wsocket = null;
     }
 
