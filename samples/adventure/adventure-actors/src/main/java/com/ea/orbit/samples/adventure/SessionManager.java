@@ -45,6 +45,6 @@ public class SessionManager extends OrbitActor implements ISessionManager
     @Override
     public Task destroySession(ISession session)
     {
-        return Task.done();
+        return session.endSession();
     }
 }

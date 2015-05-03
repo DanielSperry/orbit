@@ -32,11 +32,22 @@ import com.ea.orbit.actors.ObserverManager;
 import com.ea.orbit.actors.runtime.OrbitActor;
 import com.ea.orbit.concurrent.Task;
 
+import static com.ea.orbit.async.Await.await;
+
 public class Session extends OrbitActor<Session.State> implements ISession
 {
     public static class State
     {
         public ObserverManager<ISessionObserver> observers = new ObserverManager<>();
+    }
+
+    @Override
+    public Task activateAsync()
+    {
+        // We don't care about the result of this
+        state().observers.cleanup();
+
+        return super.activateAsync();
     }
 
     @Override
