@@ -53,7 +53,7 @@ public class Session extends OrbitActor<Session.State> implements ISession
     @Override
     public Task processInput(String input)
     {
-        state().observers.notifyObservers(o -> o.serverMessage("Echoed: " + input));
+        state().observers.notifyObservers(o -> o.serverMessage("Echoed: \033[0;31m" + input));
 
         return Task.done();
     }
