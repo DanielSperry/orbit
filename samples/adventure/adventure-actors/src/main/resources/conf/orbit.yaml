@@ -1,0 +1,15 @@
+orbit.http.port: 8080
+
+orbit.actors.clusterName: adventure
+orbit.actors.nodeName: adventure-backend
+
+orbit.actors.providers:
+  - !!com.ea.orbit.actors.providers.mongodb.MongoDBStorageProvider
+    host: localhost
+    port: 27017
+    database: adventure
+
+orbit.chat.maxMessages: 500
+
+orbit.providers:
+  - com.ea.orbit.actors.server.ServerModule
