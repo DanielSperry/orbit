@@ -26,19 +26,18 @@
  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.ea.orbit.samples.adventure;
+package com.ea.orbit.samples.adventure.utils;
 
-import com.ea.orbit.actors.IActor;
-import com.ea.orbit.concurrent.Task;
+import com.ea.orbit.annotation.Config;
 
-public interface ISession extends IActor
+import javax.inject.Singleton;
+
+@Singleton
+public class LocalizedData
 {
-    Task processInput(String input);
+    @Config("adventure.localization.greetingMessage")
+    public String greetingMessage = "WELCOME_MESSAGE";
 
-    Task addObserver(ISessionObserver observer);
-
-    Task beginSession();
-    Task endSession();
-
-    Task sendMessage(String message);
+    @Config("adventure.localization.chooseName")
+    public String chooseName = "CHOOSE_NAME";
 }

@@ -32,22 +32,22 @@ import com.ea.orbit.actors.ObserverManager;
 import com.ea.orbit.actors.runtime.OrbitActor;
 import com.ea.orbit.annotation.Config;
 import com.ea.orbit.concurrent.Task;
+import com.ea.orbit.samples.adventure.utils.LocalizedData;
+
+import javax.inject.Inject;
+
+import static com.ea.orbit.async.Await.await;
 
 public class Session extends OrbitActor<Session.State> implements ISession
 {
     public static class State
     {
         public ObserverManager<ISessionObserver> observers = new ObserverManager<>();
-        public SessionState sessionState = SessionState.UNAUTHENTICATED;
     }
 
-    public enum SessionState
-    {
-        UNAUTHENTICATED
-    }
+    @Inject
+    private LocalizedData localized;
 
-    @Config("adventure.greetingMessage")
-    private String greetingMessage;
 
     @Override
     public Task activateAsync()
@@ -61,8 +61,6 @@ public class Session extends OrbitActor<Session.State> implements ISession
     @Override
     public Task processInput(String input)
     {
-        sendMessage("Echoed: \033[0;31m" + input);
-
         return Task.done();
     }
 
@@ -76,7 +74,12 @@ public class Session extends OrbitActor<Session.State> implements ISession
     @Override
     public Task beginSession()
     {
-        sendMessage(greetingMessage);
+        // Send greeting
+        await(sendMessage(localized.greetingMessage + "\n"));
+
+        // Send name
+        await(sendMessage(localized.chooseName));
+
         return Task.done();
     }
 
@@ -86,8 +89,11 @@ public class Session extends OrbitActor<Session.State> implements ISession
         return clearState();
     }
 
-    public void sendMessage(String message)
+    @Override
+    public Task sendMessage(String message)
     {
         state().observers.notifyObservers(o -> o.serverMessage(message));
+        return Task.done();
     }
+
 }
