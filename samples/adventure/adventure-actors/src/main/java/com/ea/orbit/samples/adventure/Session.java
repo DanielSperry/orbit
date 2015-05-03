@@ -49,12 +49,18 @@ public class Session extends OrbitActor<Session.State> implements ISession
     public Task addObserver(ISessionObserver observer)
     {
         state().observers.addObserver(observer);
-        return Task.done();
+        return writeState();
     }
 
     @Override
     public Task beginSession()
     {
         return Task.done();
+    }
+
+    @Override
+    public Task endSession()
+    {
+        return clearState();
     }
 }

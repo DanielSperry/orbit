@@ -38,4 +38,5 @@ public interface ISession extends IActor
     Task addObserver(ISessionObserver observer);
 
     Task beginSession();
+    Task endSession();
 }
