@@ -44,7 +44,7 @@ public class ActorFactoryGenerator
 
     static
     {
-        classPool = new ClassPool(null);
+        classPool = new ClassPool();
         classPool.appendSystemPath();
         classPool.appendClassPath(new ClassClassPath(ActorFactoryGenerator.class));
     }

@@ -48,7 +48,7 @@ public class TaskProvider implements WriterInterceptor
 
         if(entity instanceof Task)
         {
-            Object result = entity;
+            Object result = null;
 
             try
             {
@@ -62,11 +62,21 @@ public class TaskProvider implements WriterInterceptor
 
             context.setGenericType(null);
 
-            // Set the actual type
-            context.setType(result.getClass());
+            // Do we actually have a result?
+            if(result != null)
+            {
+                // Set the type we got
+                context.setType(result.getClass());
 
-            // Replace the entity
-            context.setEntity(result);
+                // Replace the entity
+                context.setEntity(result);
+            }
+            else
+            {
+
+                // Result is null, throw a 204
+                throw new WebApplicationException(204);
+            }
         }
 
         context.proceed();
