@@ -178,28 +178,24 @@ public class ActorFactoryGenerator
 
     private static Class loadClass(final CtClass cc, final Class relatedClass)
     {
-        final byte[] bytes;
+
+        Class newClass;
         try
         {
-            bytes = cc.toBytecode();
+            newClass = cc.getClassPool().toClass(cc, relatedClass.getClassLoader(), relatedClass.getProtectionDomain());
         }
-        catch (IOException | CannotCompileException e)
+        catch (Exception ex)
         {
-            throw new UncheckedException(e);
-        }
-        class Loader extends ClassLoader
-        {
-            private Loader()
+            try
             {
-                super(relatedClass.getClassLoader());
+                newClass = relatedClass.getClassLoader().loadClass(cc.getName());
             }
+            catch (ClassNotFoundException e)
+            {
+                throw new UncheckedException(e);
+            }
+        }
 
-            public Class<?> define(final String o, final byte[] bytes)
-            {
-                return super.defineClass(o, bytes, 0, bytes.length);
-            }
-        }
-        final Class<?> newClass = new Loader().define(null, bytes);
         ConcurrentMap<String, Class> map = (ConcurrentMap<String, Class>) getRelatedClassMap(relatedClass);
         map.put(newClass.getName(), newClass);
         return newClass;
@@ -484,7 +480,7 @@ public class ActorFactoryGenerator
         }
         try
         {
-            return classPool.getClassLoader().loadClass(className);
+            return relatedClass.getClassLoader().loadClass(className);
         }
         catch (final Exception ex2)
         {
