@@ -20,13 +20,15 @@ import javassist.CtNewMethod;
 import javassist.CtPrimitiveType;
 import javassist.NotFoundException;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,7 +41,7 @@ import java.util.stream.Stream;
 public class ActorFactoryGenerator
 {
     private final static ClassPool classPool;
-    private final static Map<Type, Class<?>> stateClasses = new ConcurrentHashMap<>();
+    private final static WeakHashMap<Class, ConcurrentMap<String, Class>> derivedClasses = new WeakHashMap<>();
 
 
     static
@@ -114,7 +116,7 @@ public class ActorFactoryGenerator
     @SuppressWarnings("unchecked")
     private <T> Class<T> makeReferenceClass(final Class<T> aInterface, final String interfaceFullName, final int interfaceId, final String referenceFullName) throws NotFoundException, CannotCompileException
     {
-        Class clazz = lookup(referenceFullName);
+        Class clazz = lookup(aInterface, referenceFullName);
         if (clazz != null)
         {
             return clazz;
@@ -123,7 +125,7 @@ public class ActorFactoryGenerator
         synchronized (aInterface)
         {
             // trying again from within the synchronized block.
-            clazz = lookup(referenceFullName);
+            clazz = lookup(aInterface, referenceFullName);
             if (clazz != null)
             {
                 return clazz;
@@ -136,7 +138,7 @@ public class ActorFactoryGenerator
             final CtClass ccActorReference = pool.get(RemoteReference.class.getName());
             cc.setSuperclass(ccActorReference);
             cc.addInterface(ccInterface);
-            cc.addConstructor(CtNewConstructor.make(new CtClass[]{pool.get(String.class.getName())}, null, "{ super($1); }", cc));
+            cc.addConstructor(CtNewConstructor.make(new CtClass[]{ pool.get(String.class.getName()) }, null, "{ super($1); }", cc));
 
             int count = 0;
             for (final CtMethod m : ccInterface.getMethods())
@@ -170,8 +172,52 @@ public class ActorFactoryGenerator
             }
             cc.addMethod(CtNewMethod.make("protected int _interfaceId() { return " + interfaceId + ";}", cc));
             cc.addMethod(CtNewMethod.make("protected Class  _interfaceClass() { return " + interfaceFullName + ".class;}", cc));
-            return cc.toClass();
+            return loadClass(cc, aInterface);
         }
+    }
+
+    private static Class loadClass(final CtClass cc, final Class relatedClass)
+    {
+        final byte[] bytes;
+        try
+        {
+            bytes = cc.toBytecode();
+        }
+        catch (IOException | CannotCompileException e)
+        {
+            throw new UncheckedException(e);
+        }
+        class Loader extends ClassLoader
+        {
+            private Loader()
+            {
+                super(relatedClass.getClassLoader());
+            }
+
+            public Class<?> define(final String o, final byte[] bytes)
+            {
+                return super.defineClass(o, bytes, 0, bytes.length);
+            }
+        }
+        final Class<?> newClass = new Loader().define(null, bytes);
+        ConcurrentMap<String, Class> map = (ConcurrentMap<String, Class>) getRelatedClassMap(relatedClass);
+        map.put(newClass.getName(), newClass);
+        return newClass;
+    }
+
+    private static ConcurrentMap<String, Class> getRelatedClassMap(final Class relatedClass)
+    {
+        ConcurrentMap<String, Class> map;
+        synchronized (derivedClasses)
+        {
+            map = derivedClasses.get(relatedClass);
+            if (map == null)
+            {
+                map = new ConcurrentHashMap<>();
+                derivedClasses.put(relatedClass, map);
+            }
+        }
+        return map;
     }
 
     private int computeMethodId(final String methodName, final CtClass[] parameterTypes)
@@ -203,7 +249,7 @@ public class ActorFactoryGenerator
     private <T> Class<?> makeInvokerClass(final Class<T> actorClass, final String invokerFullName)
             throws NotFoundException, CannotCompileException
     {
-        Class clazz = lookup(invokerFullName);
+        Class clazz = lookup(actorClass, invokerFullName);
         if (clazz != null)
         {
             return clazz;
@@ -212,7 +258,7 @@ public class ActorFactoryGenerator
         synchronized (actorClass)
         {
             // trying again from within the synchronized block.
-            clazz = lookup(invokerFullName);
+            clazz = lookup(actorClass, invokerFullName);
             if (clazz != null)
             {
                 return clazz;
@@ -277,7 +323,7 @@ public class ActorFactoryGenerator
 
             cc.addMethod(CtNewMethod.make("public Class getInterface() { return " + className + ".class; }", cc));
 
-            return cc.toClass();
+            return loadClass(cc, actorClass);
         }
     }
 
@@ -286,19 +332,21 @@ public class ActorFactoryGenerator
         final Type stateType = GenericTypeReflector.getTypeParameter(actorClass,
                 AbstractActor.class.getTypeParameters()[0]);
 
+        final String newStateName = actorClass.getName() + "$ActorState";
+
         if (stateType == null)
         {
             return LinkedHashMap.class;
         }
 
-        Class<?> c = stateClasses.get(stateType);
+        Class c = lookup(actorClass, newStateName);
         if (c != null)
         {
             return c;
         }
-        synchronized (stateClasses)
+        synchronized (actorClass)
         {
-            c = stateClasses.get(stateType);
+            c = lookup(actorClass, newStateName);
             if (c != null)
             {
                 return c;
@@ -310,7 +358,7 @@ public class ActorFactoryGenerator
                 final String genericSignature = GenericUtils.toGenericSignature(stateType);
 
                 final ClassPool pool = classPool;
-                final CtClass cc = pool.makeClass(actorClass.getName() + "$ActorState");
+                final CtClass cc = pool.makeClass(newStateName);
                 cc.setGenericSignature(genericSignature);
                 final CtClass baseStateClass = pool.get(baseClass.getName());
                 cc.setSuperclass(baseStateClass);
@@ -388,16 +436,13 @@ public class ActorFactoryGenerator
                     invokerBody.append("return ((" + ActorState.class.getName() + ")super).invokeEvent($1, $2); }");
                     final CtMethod invoker = CtNewMethod.make(
                             pool.get(Object.class.getName()), "invokeEvent",
-                            new CtClass[]{pool.get(String.class.getName()), pool.get(Object[].class.getName())},
+                            new CtClass[]{ pool.get(String.class.getName()), pool.get(Object[].class.getName()) },
                             new CtClass[0],
                             invokerBody.toString(), cc);
 
                     cc.addMethod(invoker);
                 }
-                c = cc.toClass();
-                final Class<?> old = stateClasses.putIfAbsent(stateType, c);
-
-                return (old != null) ? old : c;
+                return loadClass(cc, actorClass);
             }
             catch (Exception ex)
             {
@@ -427,7 +472,7 @@ public class ActorFactoryGenerator
         }
     }
 
-    private Class lookup(String className)
+    private static Class lookup(Class relatedClass, String className)
     {
         try
         {
@@ -445,7 +490,8 @@ public class ActorFactoryGenerator
         {
             // ignore;
         }
-        return null;
+        final ConcurrentMap<String, Class> relatedClassMap = getRelatedClassMap(relatedClass);
+        return relatedClassMap.get(className);
     }
 
 }
